@@ -505,6 +505,7 @@ def test_late_forecast_curve_runs_forward_through_the_estimate():
     at = _load(_app(), "A · younger adult · 6 h")
     _set_all(at, 240.0, [95.0, 95.0, 95.0, 0.0])
     mid = float(re.search(r"≈([0-9]+) h after landing", _card(at)).group(1))
+    assert "beyond the supported range of 240 h after landing and is an extrapolation" in _card(at)
     spec = next(json.loads(c.proto.spec) for c in at.get("plotly_chart")
                 if "Retest estimate" in json.loads(c.proto.spec)["layout"].get("title", {}).get("text", ""))
     curve = spec["data"][0]
@@ -515,6 +516,7 @@ def test_late_forecast_curve_runs_forward_through_the_estimate():
 def test_loading_an_example_resets_the_medicine_scenario():
     """C03: an example reproduces its own recommendation whatever medicine was set before."""
     fresh = _card(_load(_app(), "A · younger adult · 69 h"))
+    assert "extrapolation" not in _card(_load(_app(), "A · younger adult · 6 h"))
     at = _load(_app(), "A · younger adult · 6 h")
     at.select_slider(key="dose").set_value(50.0).run()
     at.radio(key="route").set_value(at.radio(key="route").options[-1]).run()

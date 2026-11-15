@@ -26,6 +26,11 @@ The application supports the decision of a crew surgeon and is not a clearance a
 - Under literature-level noise, older individuals rarely reach GO on foam. This is a deliberate safety trade-off.
 - The single-exponential curve of Wood et al. (2015) does not represent the slower recovery phase over subsequent weeks.
 - Post-landing sessions in the demonstration are simulated by scaling a participant's own HBEDB trials onto the typical NASA crew recovery curve, and they are labelled as simulated.
+- The healthy reference group comprises HBEDB participants without a reported disability, excluding reported labyrinthitis. Other illnesses and medication are not excluded (of 140 participants, 86 report an illness and 89 a medication).
+- Balance scores improve with repeated testing, and Jain et al. (2010) excluded the first two preflight sessions for this reason. The familiarisation protocol for the preflight baseline is not specified here.
+- Jain et al. (2010) report that foam testing was tried with one Shuttle crew on landing day and abandoned after the crew reported concern that it disrupted their postflight recovery. Tolerability on landing day is unresolved.
+- The literature noise margin transfers the minimal detectable change of Pang et al. (2011), measured as five-trial means in the head-shake test with age groups divided at 50 years, to three-trial medians in static-head conditions with HBEDB age groups divided at 60 years. Errors are assumed independent and normally distributed.
+- Retest times later than 240 h after landing are extrapolations of the recovery model and are labelled as such.
 
 ## Verification
 - **Application code.** The automated test suite (`pytest`) checks every rule against an independent statement of the arithmetic (200,000 random inputs, including invalid ones), the exact thresholds, malformed inputs, the two-test history rules, the forecast and pharmacological solver against a dense brute-force search, and the real-data values reported in out/VALIDATION.md.

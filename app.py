@@ -394,8 +394,11 @@ def next_action() -> str:
                        "recovery model. Refer to the crew surgeon.")
     if worst <= 0:
         return lead + "Retest is indicated now: under the typical recovery rate, every condition has reached its GO threshold."
+    beyond = (f" This time lies beyond the supported range of {T_MAX:g} h after landing and is an extrapolation of "
+              "the recovery model." if T + worst > T_MAX else "")
     return (lead + f"Retest in approximately {worst:.0f} h (≈{T + worst:.0f} h after landing"
-            + (", with the planned dose" if med.active else "") + "). A retest, not this estimate, decides GO.")
+            + (", with the planned dose" if med.active else "") + ")." + beyond
+            + " A retest, not this estimate, decides GO.")
 
 
 # ---------------------------------------------------------------- output

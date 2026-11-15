@@ -58,7 +58,10 @@ The following results are reported in [out/VALIDATION.md](out/VALIDATION.md).
 - The participants are not astronauts, and each was recorded in a single session, so day-to-day test–retest variability is not measured.
 - No public dataset labels individuals as fit to leave a vehicle, so the thresholds are provisional and have not been validated for egress.
 - Post-landing sessions in the demonstration are **simulated** by scaling a participant's recorded trials onto the typical NASA crew recovery curve, and they are labelled as simulated on screen.
-- The forecast uses the recovery rate of a typical crew member and does not represent the slower recovery phase over subsequent weeks.
+- The forecast uses the recovery rate of a typical crew member and does not represent the slower recovery phase over subsequent weeks. A retest time later than 240 h after landing is labelled as an extrapolation.
+- The healthy reference group comprises HBEDB participants without a reported disability, excluding reported labyrinthitis. Other illnesses and medication are not excluded.
+- A reliable preflight baseline requires familiarisation sessions, because balance scores improve with repeated testing (Jain et al. 2010). The familiarisation protocol is not specified here, and the single-session HBEDB recordings cannot establish it.
+- Jain et al. (2010) report that foam testing was tried with one Shuttle crew on landing day and abandoned after the crew reported concern that it disrupted their postflight recovery. Tolerability of the test on landing day is unresolved.
 - The effect of promethazine on balance is an unvalidated scenario. A dose is entered as planned at or after the test, so it adjusts only the retest estimate and never changes a test result.
 
 ## Scope
