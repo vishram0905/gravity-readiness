@@ -24,6 +24,12 @@ from readiness import scenarios as SC
 from readiness.decision import ConditionInput, Decision, decide, decide_confirmed
 
 st.set_page_config(page_title="Gravity-Transition Readiness", page_icon="🧭", layout="wide")
+# Captions carry qualifications and sources. Streamlit renders them at reduced opacity, which falls below a 4.5:1
+# text contrast in both themes. A higher opacity of the theme text colour keeps them secondary but legible, and
+# links in captions take the caption colour with an underline.
+st.markdown("<style>[data-testid='stCaptionContainer']{opacity:0.82!important}"
+            "[data-testid='stCaptionContainer'] a{color:inherit!important;text-decoration:underline}</style>",
+            unsafe_allow_html=True)
 
 STATUS_STYLE = {  # colour is never the only cue: each status has a symbol and a word
     "GO": ("#1b5e20", "#e8f5e9", "✔"),
@@ -31,6 +37,10 @@ STATUS_STYLE = {  # colour is never the only cue: each status has a symbol and a
     "NO-GO": ("#b71c1c", "#ffebee", "✖"),
     "CANNOT ASSESS": ("#37474f", "#eceff1", "?"),
 }
+# Chart colours drawn on the page background. Each keeps a contrast ratio of at least 3:1 against both the light
+# (#ffffff) and the dark (#0e1117) Streamlit theme, so lines and points stay visible in either. Elements drawn on
+# the pastel bands of the condition chart keep their dark colours, because the bands are light in both themes.
+C_BLUE, C_CREW, C_GREEN, C_PURPLE, C_GREY = "#1e88e5", "#e65100", "#2e9d47", "#ab47bc", "#8a8f98"
 LINKS = {
     "Wood, Paloski and Clark 2015 (NASA crew posturography after ISS)": "https://doi.org/10.3357/AMHP.EC07.2015",
     "Human Balance Evaluation Database (PhysioNet)": "https://physionet.org/content/hbedb/1.0.0/",
@@ -468,11 +478,15 @@ with right:
                           line=dict(color="#5d4037", width=2, dash="dot"))
         r = per[c]
         mark = {"GO": "#1b5e20", "CAUTION": "#8a5a00", "NO-GO": "#b71c1c", "CANNOT ASSESS": "#37474f"}[r.status]
-        fig.add_scatter(x=[ratios[c]], y=[i], mode="markers+text", showlegend=False,
-                        marker=dict(size=16, color=mark, symbol="x" if ss[f"out_{c}"] == "fall" else "diamond"),
-                        text=[f"{ratios[c]:.0%} · {r.status}"], textposition="bottom center",
+        fig.add_scatter(x=[ratios[c]], y=[i], mode="markers", showlegend=False,
+                        marker=dict(size=16, color=mark, symbol="x" if ss[f"out_{c}"] == "fall" else "diamond",
+                                    line=dict(color="#ffffff", width=1)),
                         hovertemplate=f"{C.CONDITION_LABELS[c]}: {ratios[c]:.1%} of baseline, GO threshold {q:.1%}"
                                       "<extra></extra>")
+        # Label below the marker on its own light background, so it reads in both themes and over any band.
+        fig.add_annotation(x=min(max(ratios[c], 0.06), x_max - 0.06), y=i - 0.34, yanchor="top", showarrow=False,
+                           text=f"{ratios[c]:.0%} · {r.status}", font=dict(size=11, color="#212121"),
+                           bgcolor="rgba(255,255,255,0.88)", borderpad=1)
         if landed:
             w = F.wood(c)
             r_nasa = F.recovery(T, w["D"], w["tau"])
@@ -483,7 +497,7 @@ with right:
                   annotation_text="75%", annotation_position="top")
     fig.update_layout(height=320, margin=dict(t=24, b=40, l=10, r=10),
                       xaxis=dict(range=[0, x_max], tickformat=".0%", title="score as % of own baseline"),
-                      yaxis=dict(tickvals=list(range(4)), ticktext=names, range=[-0.6, 3.6]))
+                      yaxis=dict(tickvals=list(range(4)), ticktext=names, range=[-0.75, 3.6]))
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Red: below 75% of baseline (NO-GO, rule 3). Amber: CAUTION band. Green: at or above the GO threshold "
                "(solid green line, rule 5). Dotted brown line: healthy population floor (rule 4). When rules 1–3 do not "
@@ -568,16 +582,16 @@ if med_allowed and fc and (test.status != "GO" or (med.active and (unreach or wo
     st.markdown(explain + explain_passed + " Recovery rates are taken from NASA crew data (Wood et al. 2015, Table III, n = 37 ISS crew).")
     fig2 = go.Figure()
     base_curve = M.curve(t_axis, lim.D_i, lim.tau)
-    fig2.add_scatter(x=t_axis, y=base_curve, name="typical recovery (Wood et al. 2015)", line=dict(color="#1565c0"))
+    fig2.add_scatter(x=t_axis, y=base_curve, name="typical recovery (Wood et al. 2015)", line=dict(color=C_BLUE))
     curve_min = float(np.min(base_curve))
     if med.active and P.drug_slope(cond) is not None:
         dosed = M.curve(t_axis, lim.D_i, lim.tau, med.dose_mg, med.route, P.drug_slope(cond), p.baseline(cond),
                         med.t_dose)
         curve_min = min(curve_min, float(np.min(dosed)))
         fig2.add_scatter(x=t_axis, y=dosed, name=f"with {med.dose_mg:g} mg {med.route}",
-                         line=dict(color="#6a1b9a", dash="dot"))
-    fig2.add_scatter(x=[T], y=[lim.r_m], mode="markers", marker=dict(size=11, color="#212121"), name="current session")
-    fig2.add_hline(y=q_lim, line_dash="dash", line_color="#1b5e20",
+                         line=dict(color=C_PURPLE, dash="dot"))
+    fig2.add_scatter(x=[T], y=[lim.r_m], mode="markers", marker=dict(size=11, color=C_CREW), name="current session")
+    fig2.add_hline(y=q_lim, line_dash="dash", line_color=C_GREEN,
                    annotation_text=f"GO threshold {q_lim:.2f}" + ("" if lim.hours else " (not reached)"),
                    annotation_position="bottom right")
     if test.status == "GO":
@@ -585,14 +599,15 @@ if med_allowed and fc and (test.status != "GO" or (med.active and (unreach or wo
     if unreach:
         title = title if test.status == "GO" else f"No retest estimate<br><sup>{label} does not reach its GO threshold</sup>"
     elif worst <= 0:
-        fig2.add_vline(x=T, line_color="#0d47a1", annotation_text="retest indicated", annotation_position="top")
+        fig2.add_vline(x=T, line_color=C_BLUE, annotation_text="retest indicated", annotation_position="top")
         title = f"Retest indicated<br><sup>{label} at its GO threshold under the typical rate</sup>"
     else:
         mid = T + lim.hours[1]
         lo = T + max(f.hours[0] for f in reach)  # shading = overall range across conditions, as in the caption
         hi = T + max(f.hours[2] for f in reach)
-        fig2.add_vrect(x0=lo, x1=hi, fillcolor="#90caf9", opacity=0.25, line_width=0)
-        fig2.add_vline(x=mid, line_color="#0d47a1", annotation_text=(f"retest ≈ {mid:.0f} h" if test.status != "GO" else f"threshold regained ≈ {mid:.0f} h"),
+        fig2.add_vrect(x0=lo, x1=hi, fillcolor="#90caf9", opacity=0.12, line_width=0)
+        # Fill kept light so that every line inside the range keeps at least 3:1 contrast in both themes.
+        fig2.add_vline(x=mid, line_color=C_BLUE, annotation_text=(f"retest ≈ {mid:.0f} h" if test.status != "GO" else f"threshold regained ≈ {mid:.0f} h"),
                        annotation_position="top")
         if test.status != "GO":
             title = f"Retest estimate<br><sup>{label} (rate-limiting condition)</sup>"
@@ -628,9 +643,9 @@ if landed:
         rr, cc = k // 2 + 1, k % 2 + 1
         w = F.wood(c)
         fig3.add_scatter(x=tt_n, y=[F.recovery(x, w["D"], w["tau"]) for x in tt_n], row=rr, col=cc,
-                         line=dict(color="#0d47a1", width=2), name="typical ISS crew (Wood et al. 2015)",
+                         line=dict(color=C_BLUE, width=2), name="typical ISS crew (Wood et al. 2015)",
                          showlegend=k == 0, hovertemplate="typical ISS crew at %{x:.0f} h: %{y:.0%}<extra></extra>")
-        fig3.add_hline(y=q_by_cond[c], line_dash="dash", line_color="#1b5e20", row=rr, col=cc)
+        fig3.add_hline(y=q_by_cond[c], line_dash="dash", line_color=C_GREEN, row=rr, col=cc)
         xs, ys, sym, lab = [], [], [], []
         for t_i, tr_i, out_i, name_i in pts:
             if out_i[c] == "invalid":  # an invalid recording is not a measurement
@@ -639,8 +654,8 @@ if landed:
             xs.append(t_i); ys.append(r_i); lab.append(name_i)
             sym.append("x" if out_i[c] == "fall" else "circle-open" if name_i.startswith("current") else "circle")
         fig3.add_scatter(x=xs, y=ys, mode="markers+lines", row=rr, col=cc, showlegend=k == 0, name="this crew member",
-                         line=dict(color="#424242", width=1, dash="dot"),
-                         marker=dict(size=10, color="#212121", symbol=sym), text=lab,
+                         line=dict(color=C_CREW, width=1, dash="dot"),
+                         marker=dict(size=10, color=C_CREW, symbol=sym, line=dict(color=C_CREW, width=2)), text=lab,
                          hovertemplate="%{text}: %{y:.0%} of own baseline<extra></extra>")
         if xs:
             diffs[c] = (ys[-1] - F.recovery(xs[-1], w["D"], w["tau"])) * 100, lab[-1]
@@ -665,7 +680,7 @@ if landed:
         st.caption(f"The current session ({t_now:g} h) precedes the last recorded session and is not plotted.")
     st.caption("Descriptive comparison only; it does not enter the decision. Blue line: NASA crew recovery model "
                "(Wood et al. 2015, Table III, n = 37), transferred to the conditions used here as in the chart above. "
-               "Dashed green line: this crew member's GO threshold. Filled points: recorded sessions; open point: the "
+               "Dashed green line: this crew member's GO threshold. Orange points: this crew member, filled for recorded sessions and open for the "
                "current session; a cross marks a fall. Invalid recordings are not plotted. With two or more sessions, the trajectory shows whether this "
                "crew member is recovering faster or slower than the typical crew member. Simulated sessions follow the "
                "typical curve with this participant's own trial spread, so their agreement with it is by construction.")
@@ -702,9 +717,9 @@ with tab_meas:
     ptp = float(np.nanmax(xx) - np.nanmin(xx))
     theta = float(np.degrees(np.arctan(ptp / (C.COM_HEIGHT_FRAC * hgt))))
     fig6 = go.Figure()
-    fig6.add_scatter(x=tt, y=xx, line=dict(color="#1565c0", width=1.5), name="centre of mass")
-    fig6.add_hline(y=float(np.nanmax(xx)), line_dash="dot", line_color="#757575")
-    fig6.add_hline(y=float(np.nanmin(xx)), line_dash="dot", line_color="#757575",
+    fig6.add_scatter(x=tt, y=xx, line=dict(color=C_BLUE, width=1.5), name="centre of mass")
+    fig6.add_hline(y=float(np.nanmax(xx)), line_dash="dot", line_color=C_GREY)
+    fig6.add_hline(y=float(np.nanmin(xx)), line_dash="dot", line_color=C_GREY,
                    annotation_text=f"peak-to-peak {ptp:.2f} cm", annotation_position="bottom right")
     fig6.update_layout(title=f"Recorded baseline trial {tid}<br><sup>{C.CONDITION_LABELS[mc]}, anterior–posterior "
                              "centre-of-mass sway</sup>", height=320, xaxis_title="time (s)",
@@ -782,13 +797,13 @@ with tab_other:
     for subj, g in lab.groupby("subject"):
         g = g.sort_values("day")
         fig4.add_scatter(x=g["day"], y=g["share"], mode="lines+markers", name=f"crew member {subj}")
-    fig4.add_vline(x=0, line_dash="dot", line_color="#616161", annotation_text="flight", annotation_position="top")
-    fig4.add_hline(y=1.0, line_color="#9e9e9e", line_width=1)
+    fig4.add_vline(x=0, line_dash="dot", line_color=C_GREY, annotation_text="flight", annotation_position="top")
+    fig4.add_hline(y=1.0, line_color=C_GREY, line_width=1)
     fig4.update_layout(title=f"{analyte.capitalize().replace('(bun)', '(BUN)')}<br><sup>ratio to each crew member's "
                              "preflight mean</sup>", height=340,
                        xaxis_title="days before launch (negative) and after return (positive), with the 3-day flight at 0",
                        yaxis_title="ratio to preflight mean", margin=dict(t=70, b=10),
-                       legend=dict(orientation="h", y=-0.3))
+                       legend=dict(orientation="h", y=-0.3), colorway=[C_BLUE, C_CREW, C_GREEN, C_PURPLE])
     st.plotly_chart(fig4, use_container_width=True)
     r1 = lab[lab.timepoint == "R+1"].sort_values("subject")
     st.dataframe(pd.DataFrame({"Crew member": r1["subject"], "Day after return (R+1)": r1["value"].round(2),

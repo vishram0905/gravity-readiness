@@ -560,3 +560,48 @@ def test_extrapolation_label_with_a_planned_dose_and_no_forecast_for_unordered_t
     at.run()
     assert _status(at) == "CANNOT ASSESS"
     assert "Estimated retest time" not in [s.value for s in at.subheader]
+
+
+def test_chart_colours_are_visible_in_light_and_dark_themes():
+    """Lines and points drawn on the page background keep a contrast ratio of at least 3:1 against both themes,
+    and no chart element on the page background uses a near-black colour that disappears in the dark theme."""
+    import re
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[1] / "app.py").read_text()
+    names = re.search(r'^C_BLUE, C_CREW, C_GREEN, C_PURPLE, C_GREY = (.+)$', src, re.M).group(1)
+    colours = re.findall(r'"(#[0-9a-fA-F]{6})"', names)
+    assert len(colours) == 5
+
+    def lum(h):
+        c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+    def ratio(a, b):
+        hi, lo = sorted((lum(a), lum(b)), reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+
+    for col in colours:
+        assert ratio(col, "#ffffff") >= 3.0, col
+        assert ratio(col, "#0e1117") >= 3.0, col
+    import ast
+    # Every literal colour in the arguments of fig2/fig3/fig4/fig6 add_* calls (whole call, continuation lines included).
+    for node in ast.walk(ast.parse(src)):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr.startswith("add_")
+                and isinstance(node.func.value, ast.Name) and node.func.value.id in {"fig2", "fig3", "fig4", "fig6"}):
+            lits = [n.value for n in ast.walk(node) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+            for lit in lits:
+                if re.fullmatch(r"#[0-9a-fA-F]{6}", lit) and lit.lower() != "#90caf9":  # range fill, opacity 0.12
+                    assert ratio(lit, "#ffffff") >= 3.0 and ratio(lit, "#0e1117") >= 3.0, (node.lineno, lit)
+
+    def mix(fg, bg, a):
+        f, b = ([int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in (fg, bg))
+        return "#" + "".join(f"{round(a * x + (1 - a) * y):02x}" for x, y in zip(f, b))
+
+    assert 'fillcolor="#90caf9", opacity=0.12' in src
+    for bg in ("#ffffff", "#0e1117"):  # lines drawn inside the shaded retest range
+        shaded = mix("#90caf9", bg, 0.12)
+        for col in colours:
+            if col != "#8a8f98":
+                assert ratio(col, shaded) >= 3.0, (bg, col)
