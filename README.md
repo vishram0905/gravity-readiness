@@ -4,7 +4,7 @@
 
 The Gravity-Transition Readiness Model is a decision-support prototype developed for NASA Space Apps 2026, challenge *Create Health Monitoring Software for Astronauts on Space Missions*. It classifies a standing-balance test as **GO**, **CAUTION** or **NO-GO** (or **CANNOT ASSESS**), states the condition that determines the result, and estimates the retest time from NASA crew recovery data. The output supports the crew surgeon and does not constitute clearance.
 
-Live app (runs in the browser, no installation): <https://vishram0905.github.io/gravity-readiness-docs/app/>
+Live app (runs in the browser, no installation): <https://vishram0905.github.io/gravity-readiness-app/>
 
 Documentation: <https://vishram0905.github.io/gravity-readiness-docs/>
 
