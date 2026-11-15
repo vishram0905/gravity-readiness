@@ -127,8 +127,8 @@ def test_random_inputs_match_the_engine(seed):
     """Whatever the user sets, the card and the rule table show the engine's own result."""
     rng = np.random.default_rng(seed)
     at = _app()
-    who = list(at.selectbox(key="who").options)[seed % 3]
-    at.selectbox(key="who").set_value(who).run()
+    who = list(at.radio(key="who").options)[seed % 3]
+    at.radio(key="who").set_value(who).run()
     p = SC.load_person(list(PEOPLE.values())[seed % 3])
     vals, outs = {}, {}
     for c in C.CONDITIONS:
@@ -252,7 +252,7 @@ def test_score_above_baseline_is_not_called_unreachable():
     """Review C03: a condition already above its GO threshold is reported as passed, not unreachable, and its
     current point lies inside the chart."""
     at = _app()
-    at.selectbox(key="who").set_value(at.selectbox(key="who").options[1]).run()
+    at.radio(key="who").set_value(at.radio(key="who").options[1]).run()
     for c, v in zip(C.CONDITIONS, (85.0, 95.0, 95.0, 95.0)):
         at.slider(key=f"eq_{c}").set_value(v)
     at.run()
@@ -435,7 +435,7 @@ def test_three_trial_mode_uses_the_recorded_trials():
 
 def test_changing_the_crew_member_clears_the_history(at):
     _load(at, "A · younger adult · 71 h")
-    at.selectbox(key="who").set_value(at.selectbox(key="who").options[1]).run()
+    at.radio(key="who").set_value(at.radio(key="who").options[1]).run()
     assert at.session_state["history"] == []
 
 

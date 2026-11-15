@@ -203,7 +203,7 @@ with left:
     st.selectbox("Load an example", EX_NAMES, key="example", on_change=load_example,
                  help="Fills every control, and resets the pharmacological scenario to no dose. Post-landing examples are simulated from the participant's own "
                       "HBEDB recordings and the NASA crew recovery model.")
-    st.selectbox("Crew member baseline", PARTICIPANTS, key="who", on_change=lambda: ss.update(history=[], awaiting=False),
+    st.radio("Crew member baseline", PARTICIPANTS, key="who", on_change=lambda: ss.update(history=[], awaiting=False),
                  help="Preflight baseline and age group. HBEDB reference scores serve as the preflight proxy. "
                       "Changing the crew member clears the session history.")
     pi = PARTICIPANTS.index(ss.who)
@@ -691,7 +691,8 @@ with tab_meas:
                 "score follows the NASA formula: the peak-to-peak anterior–posterior sway over 20 s is converted into a "
                 "sway angle θ relative to the centre-of-mass height (0.55 × body height), and EQ = 100 × (1 − θ / 12.5°), "
                 "where 12.5° is the limit of stability. A score of 100 indicates no sway.")
-    mc = st.selectbox("Condition", C.CONDITIONS, format_func=lambda c: C.CONDITION_LABELS[c], index=3, key="meas_cond")
+    mc = st.radio("Condition", C.CONDITIONS, format_func=lambda c: C.CONDITION_LABELS[c], index=3, key="meas_cond",
+                  horizontal=True)
     tid, hgt, tt, xx, eq_tr = baseline_trace(subject, mc)
     ptp = float(np.nanmax(xx) - np.nanmin(xx))
     theta = float(np.degrees(np.arctan(ptp / (C.COM_HEIGHT_FRAC * hgt))))
@@ -769,7 +770,7 @@ with tab_other:
                 "panels for the four Inspiration4 crew members (3-day flight, 2021) before and after flight. The same "
                 "within-subject principle is applied: each value is expressed relative to the individual's own "
                 "preflight mean. **These data do not enter the balance decision.**")
-    analyte = st.selectbox("Analyte", L.ANALYTES, index=0,
+    analyte = st.radio("Analyte", L.ANALYTES, index=0, horizontal=True,
                            format_func=lambda a: a.capitalize().replace("(bun)", "(BUN)"))
     lab = labs[labs.analyte == analyte]
     fig4 = go.Figure()
