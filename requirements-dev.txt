@@ -1,0 +1,2 @@
+wfdb==4.1.2  # independent decoder used by the B1 gate (tests only)
+matplotlib==3.9.2  # validation plots (scripts/validate.py)

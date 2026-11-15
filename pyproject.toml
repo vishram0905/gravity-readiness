@@ -1,0 +1,10 @@
+[project]
+name = "gravity-readiness"
+version = "0.1.0"
+description = "Post-landing egress readiness from standing balance: GO / CAUTION / NO-GO with a retest forecast"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["full: needs the full HBEDB (set HBEDB_DIR); skipped otherwise"]
