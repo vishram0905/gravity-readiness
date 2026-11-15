@@ -322,7 +322,7 @@ tag_text = (source + " · SIMULATED SESSION IN HISTORY"
             if any("SIMULATED" in x for x in hist_sources) and "SIMULATED" not in source else source)
 
 # The planned dose stays in force when the session is GO: it can lower a passing score before a confirmatory test.
-med_allowed = landed and test.status != "CANNOT ASSESS" and not any_fall
+med_allowed = landed and test.status != "CANNOT ASSESS" and overall.status != "CANNOT ASSESS" and not any_fall
 med = (SC.Medicine(float(ss.get("dose", 0.0)), ss.get("route", "oral"), T + float(ss.get("dose_after", 0.0)))
        if med_allowed else SC.Medicine())
 fc, fc_none, reach, unreach, passed = [], {}, [], [], set()
@@ -355,7 +355,9 @@ def dose_note() -> str:
                 "Refer to the crew surgeon.")
     if worst > 0:
         return (f" With the planned dose, the typical-recovery model predicts a score below the GO threshold until "
-                f"approximately {T + worst:.0f} h after landing.")
+                f"approximately {T + worst:.0f} h after landing."
+                + (f" This time lies beyond the supported range of {T_MAX:g} h after landing and is an extrapolation "
+                   "of the recovery model." if T + worst > T_MAX else ""))
     return ""
 
 

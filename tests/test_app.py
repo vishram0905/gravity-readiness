@@ -544,3 +544,19 @@ def test_recovery_comparison_ignores_invalid_and_out_of_order_sessions():
     at.slider(key="t").set_value(6.0)
     at.run()
     assert "(recorded 71 h)" in _text(at) and "precedes the last recorded session and is not plotted" in _text(at)
+
+
+def test_extrapolation_label_with_a_planned_dose_and_no_forecast_for_unordered_times():
+    """Documentation review recheck C06/C07."""
+    at = _load(_app(), "A · younger adult · 6 h")
+    _set_all(at, 239.0, [100.0] * 4)
+    at.select_slider(key="dose").set_value(50.0).run()
+    at.radio(key="route").set_value("im").run()
+    at.slider(key="dose_after").set_value(48.0).run()
+    assert "approximately 305 h after landing" in _card(at) and "extrapolation" in _card(at)
+    at = _load(_app(), "A · younger adult · 71 h")
+    at.slider(key="eq_firm_eo").set_value(99.9)
+    at.slider(key="t").set_value(60.0)
+    at.run()
+    assert _status(at) == "CANNOT ASSESS"
+    assert "Estimated retest time" not in [s.value for s in at.subheader]
