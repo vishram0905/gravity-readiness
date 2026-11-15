@@ -621,11 +621,16 @@ def test_reset_restores_the_selected_example():
     assert {k: at.session_state[k] for k in before} == before
 
 
-def test_pharmacological_scenario_sits_with_the_results_not_in_a_tab():
-    """Tester feedback: the dose controls are on the main page beside the retest chart, not in a tab."""
+def test_pharmacological_scenario_sits_with_the_inputs_not_in_a_tab():
+    """Tester feedback: the dose controls sit in the inputs column with the other sliders, not in a tab or at the
+    bottom of the page; the retest chart and the dose effect sit in the results column."""
     at = _load(_app(), "A · younger adult · 6 h")
     assert "Pharmacological scenario" not in [t.label for t in at.tabs]
-    assert "Pharmacological scenario (what-if)" in [h.value for h in at.subheader]
+    inputs = next(col for col in at.columns if any(w.key == "t" for w in col.get("slider")))
+    assert any(w.key == "dose" for w in inputs.get("select_slider"))
+    assert any(w.key == "dose_after" for w in inputs.get("slider"))
+    results = next(col for col in at.columns if any(h.value == "Model output" for h in col.get("subheader")))
+    assert any(h.value == "Estimated retest time" for h in results.get("subheader"))
 
 
 def test_condition_chart_labels_sit_outside_the_plot_area():
