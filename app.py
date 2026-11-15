@@ -213,6 +213,9 @@ with left:
     st.selectbox("Load an example", EX_NAMES, key="example", on_change=load_example,
                  help="Fills every control, and resets the pharmacological scenario to no dose. Post-landing examples are simulated from the participant's own "
                       "HBEDB recordings and the NASA crew recovery model.")
+    st.button("Reset to this example's values", on_click=load_example, use_container_width=True,
+              help="Restores every control, the session history and the pharmacological scenario to the values of "
+                   "the selected example.")
     st.radio("Crew member baseline", PARTICIPANTS, key="who", on_change=lambda: ss.update(history=[], awaiting=False),
                  help="Preflight baseline and age group. HBEDB reference scores serve as the preflight proxy. "
                       "Changing the crew member clears the session history.")
@@ -623,6 +626,52 @@ if med_allowed and fc and (test.status != "GO" or (med.active and (unreach or wo
                    "of the crew model parameters (not a 95% interval for this crew member). The single-exponential "
                    "model does not represent the slower recovery phase over subsequent weeks.")
 
+# ---------------------------------------------------------------- pharmacological scenario, next to its chart
+with st.container(border=True):
+    st.subheader("Pharmacological scenario (what-if)")
+    st.markdown("**Promethazine (antiemetic) planned at or after the current session.** A planned dose adjusts only "
+                f"the retest estimate and never the test result ({M.LABEL}).")
+    if not med_allowed:
+        st.caption("Not applicable to the present inputs. The scenario applies only after landing, when every "
+                   "condition has a valid recording and no fall has occurred.")
+    else:
+        mc1, mc2, mc3 = st.columns(3)
+        with mc1:
+            st.select_slider("Planned dose (mg)", options=list(C.DOSES_MG), key="dose")
+        with mc2:
+            st.radio("Route", ["oral", "im"], format_func=lambda r: "oral" if r == "oral" else "intramuscular",
+                     horizontal=True, key="route", disabled=ss.get("dose", 0.0) == 0)
+        with mc3:
+            st.slider("Dose time (h after the current session)", 0.0, 48.0, step=0.5, key="dose_after",
+                      disabled=ss.get("dose", 0.0) == 0)
+        if ss.get("dose", 0.0) in (12.5, 50.0):
+            st.caption("The 12.5 and 50 mg effects are extrapolated from the 25 mg study.")
+    if med.active and fc:
+        def _cross(f, with_dose: bool):
+            c = f.condition
+            if with_dose:
+                return M.t_go(f.D_i, f.tau, q_by_cond[c], med.dose_mg, med.route, P.drug_slope(c),
+                              p.baseline(c), med.t_dose, 0.0)
+            return M.t_go(f.D_i, f.tau, q_by_cond[c])
+
+        med_conds = [f for f in fc if f.hours is not None and f.condition in fc_none and
+                     fc_none[f.condition].hours is not None and P.drug_slope(f.condition) is not None]
+        if not med_conds:
+            st.caption("The dose does not shift any condition with an attainable GO threshold for these inputs.")
+        for f in med_conds:
+            h0, h1 = _cross(fc_none[f.condition], False), _cross(f, True)
+            st.caption(f"{C.CONDITION_LABELS[f.condition].capitalize()} reaches its GO threshold at approximately "
+                       f"{h0:.1f} h after landing without the dose and {h1:.1f} h with it, on the typical-recovery "
+                       "curves.")
+        if not unreach and all(c in fc_none and fc_none[c].hours is not None for c in (f.condition for f in fc)):
+            all0 = [_cross(fc_none[f.condition], False) for f in fc]
+            all1 = [_cross(f, True) for f in fc]
+            if None not in all0 and None not in all1:
+                o0, o1 = max(all0), max(all1)
+                st.caption(f"All four conditions reach their GO thresholds at approximately {o0:.1f} h after landing "
+                           f"without the dose and {o1:.1f} h with it" + (" (no change)." if abs(o1 - o0) < 0.05 else "."))
+        st.info(M.WARN_FLIGHT)
+
 # ---------------------------------------------------------------- recovery compared with typical NASA crew
 if landed:
     from plotly.subplots import make_subplots
@@ -685,8 +734,8 @@ if landed:
                "crew member is recovering faster or slower than the typical crew member. Simulated sessions follow the "
                "typical curve with this participant's own trial spread, so their agreement with it is by construction.")
 
-tab_meas, tab_med, tab_nasa, tab_other = st.tabs(["From force plate to score", "Pharmacological scenario",
-                                                  "NASA data and limitations", "Additional crew data (context)"])
+tab_meas, tab_nasa, tab_other = st.tabs(["From force plate to score", "NASA data and limitations",
+                                        "Additional crew data (context)"])
 
 
 @st.cache_data(show_spinner=False)
@@ -731,52 +780,6 @@ with tab_meas:
                "this condition. The median of the three trials is the preflight baseline used in the decision. The "
                "same computation applies to any force plate that records the centre of pressure and the horizontal "
                "force.")
-# ---------------------------------------------------------------- tab: medicine what-if
-with tab_med:
-    st.markdown("**Promethazine (antiemetic) planned at or after the current session.** A planned dose adjusts only "
-                f"the retest estimate and never the test result ({M.LABEL}).")
-    if not med_allowed:
-        st.caption("Not applicable to the present inputs. The scenario applies only after landing, when every "
-                   "condition has a valid recording and no fall has occurred.")
-    else:
-        mc1, mc2, mc3 = st.columns(3)
-        with mc1:
-            st.select_slider("Planned dose (mg)", options=list(C.DOSES_MG), key="dose")
-        with mc2:
-            st.radio("Route", ["oral", "im"], format_func=lambda r: "oral" if r == "oral" else "intramuscular",
-                     horizontal=True, key="route", disabled=ss.get("dose", 0.0) == 0)
-        with mc3:
-            st.slider("Dose time (h after the current session)", 0.0, 48.0, step=0.5, key="dose_after",
-                      disabled=ss.get("dose", 0.0) == 0)
-        if ss.get("dose", 0.0) in (12.5, 50.0):
-            st.caption("The 12.5 and 50 mg effects are extrapolated from the 25 mg study.")
-    if med.active and fc:
-        def _cross(f, with_dose: bool):
-            c = f.condition
-            if with_dose:
-                return M.t_go(f.D_i, f.tau, q_by_cond[c], med.dose_mg, med.route, P.drug_slope(c),
-                              p.baseline(c), med.t_dose, 0.0)
-            return M.t_go(f.D_i, f.tau, q_by_cond[c])
-
-        med_conds = [f for f in fc if f.hours is not None and f.condition in fc_none and
-                     fc_none[f.condition].hours is not None and P.drug_slope(f.condition) is not None]
-        if not med_conds:
-            st.caption("The dose does not shift any condition with an attainable GO threshold for these inputs.")
-        for f in med_conds:
-            h0, h1 = _cross(fc_none[f.condition], False), _cross(f, True)
-            st.caption(f"{C.CONDITION_LABELS[f.condition].capitalize()} reaches its GO threshold at approximately "
-                       f"{h0:.1f} h after landing without the dose and {h1:.1f} h with it, on the typical-recovery "
-                       "curves.")
-        if not unreach and all(c in fc_none and fc_none[c].hours is not None for c in (f.condition for f in fc)):
-            all0 = [_cross(fc_none[f.condition], False) for f in fc]
-            all1 = [_cross(f, True) for f in fc]
-            if None not in all0 and None not in all1:
-                o0, o1 = max(all0), max(all1)
-                st.caption(f"All four conditions reach their GO thresholds at approximately {o0:.1f} h after landing "
-                           f"without the dose and {o1:.1f} h with it" + (" (no change)." if abs(o1 - o0) < 0.05 else "."))
-        st.info(M.WARN_FLIGHT)
-
-
 # ---------------------------------------------------------------- tab: other crew data (NASA OSDR)
 @st.cache_data(show_spinner=False)
 def crew_labs():

@@ -605,3 +605,20 @@ def test_chart_colours_are_visible_in_light_and_dark_themes():
         for col in colours:
             if col != "#8a8f98":
                 assert ratio(col, shaded) >= 3.0, (bg, col)
+
+
+def test_reset_restores_the_selected_example():
+    """Tester feedback: one button returns every control of the selected example to its stored values."""
+    at = _load(_app(), "A · younger adult · 6 h")
+    before = {k: at.session_state[k] for k in ("eq_foam_ec", "out_foam_ec", "t", "dose")}
+    at.slider(key="eq_foam_ec").set_value(99.0)
+    at.radio(key="out_foam_ec").set_value("fall").run()
+    next(b for b in at.button if b.label == "Reset to this example's values").click().run()
+    assert {k: at.session_state[k] for k in before} == before
+
+
+def test_pharmacological_scenario_sits_with_the_results_not_in_a_tab():
+    """Tester feedback: the dose controls are on the main page beside the retest chart, not in a tab."""
+    at = _load(_app(), "A · younger adult · 6 h")
+    assert "Pharmacological scenario" not in [t.label for t in at.tabs]
+    assert "Pharmacological scenario (what-if)" in [h.value for h in at.subheader]
