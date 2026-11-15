@@ -610,8 +610,12 @@ def test_chart_colours_are_visible_in_light_and_dark_themes():
 def test_reset_restores_the_selected_example():
     """Tester feedback: one button returns every control of the selected example to its stored values."""
     at = _load(_app(), "A · younger adult · 6 h")
-    before = {k: at.session_state[k] for k in ("eq_foam_ec", "out_foam_ec", "t", "dose")}
+    keys = ("who", "landed", "t", "dose", "route", "dose_after", "history", "awaiting",
+            *[f"{p}_{c}" for c in C.CONDITIONS for p in ("eq", "out")],
+            *[f"tr_{c}_{k}" for c in C.CONDITIONS for k in range(3)])
+    before = {k: at.session_state[k] for k in keys}
     at.slider(key="eq_foam_ec").set_value(99.0)
+    at.slider(key="t").set_value(30.0)
     at.radio(key="out_foam_ec").set_value("fall").run()
     next(b for b in at.button if b.label == "Reset to this example's values").click().run()
     assert {k: at.session_state[k] for k in before} == before
@@ -622,3 +626,16 @@ def test_pharmacological_scenario_sits_with_the_results_not_in_a_tab():
     at = _load(_app(), "A · younger adult · 6 h")
     assert "Pharmacological scenario" not in [t.label for t in at.tabs]
     assert "Pharmacological scenario (what-if)" in [h.value for h in at.subheader]
+
+
+def test_condition_chart_labels_sit_outside_the_plot_area():
+    """Tester feedback: the result labels are drawn in a column to the right of the bars, not over markers or lines."""
+    import ast
+    tree = ast.parse((C.REPO_ROOT / "app.py").read_text())
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "add_annotation"
+             and isinstance(n.func.value, ast.Name) and n.func.value.id == "fig"]
+    assert calls
+    for call in calls:
+        kw = {k.arg: k.value for k in call.keywords}
+        assert ast.literal_eval(kw["xref"]) == "paper" and ast.literal_eval(kw["x"]) >= 1.0
+        assert ast.literal_eval(kw["xanchor"]) == "left"

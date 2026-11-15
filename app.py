@@ -214,8 +214,9 @@ with left:
                  help="Fills every control, and resets the pharmacological scenario to no dose. Post-landing examples are simulated from the participant's own "
                       "HBEDB recordings and the NASA crew recovery model.")
     st.button("Reset to this example's values", on_click=load_example, use_container_width=True,
-              help="Restores every control, the session history and the pharmacological scenario to the values of "
-                   "the selected example.")
+              help="Restores the crew member, the time, every score and trial outcome, the session history and the "
+                   "pharmacological scenario to the values of the selected example. The input mode (single score or "
+                   "three trials) and the condition shown under 'From force plate to score' are kept.")
     st.radio("Crew member baseline", PARTICIPANTS, key="who", on_change=lambda: ss.update(history=[], awaiting=False),
                  help="Preflight baseline and age group. HBEDB reference scores serve as the preflight proxy. "
                       "Changing the crew member clears the session history.")
@@ -486,10 +487,11 @@ with right:
                                     line=dict(color="#ffffff", width=1)),
                         hovertemplate=f"{C.CONDITION_LABELS[c]}: {ratios[c]:.1%} of baseline, GO threshold {q:.1%}"
                                       "<extra></extra>")
-        # Label below the marker on its own light background, so it reads in both themes and over any band.
-        fig.add_annotation(x=min(max(ratios[c], 0.06), x_max - 0.06), y=i - 0.34, yanchor="top", showarrow=False,
-                           text=f"{ratios[c]:.0%} · {r.status}", font=dict(size=11, color="#212121"),
-                           bgcolor="rgba(255,255,255,0.88)", borderpad=1)
+        # Result label in a column to the right of the plot area, clear of the markers and lines, drawn on its
+        # own light background with a border in the status colour, so it reads in both themes.
+        fig.add_annotation(x=1.0, xref="paper", xanchor="left", xshift=10, y=i, showarrow=False,
+                           text=f"<b>{ratios[c]:.0%}</b> · {r.status}", font=dict(size=13, color="#212121"),
+                           bgcolor="#ffffff", bordercolor=mark, borderwidth=2, borderpad=4, width=172, align="left")
         if landed:
             w = F.wood(c)
             r_nasa = F.recovery(T, w["D"], w["tau"])
@@ -498,9 +500,9 @@ with right:
                             hovertemplate=f"typical ISS crew at {T:g} h: {r_nasa:.0%} (Wood et al. 2015)<extra></extra>")
     fig.add_vline(x=C.R_NOGO, line_color="#b71c1c", line_dash="dot",
                   annotation_text="75%", annotation_position="top")
-    fig.update_layout(height=320, margin=dict(t=24, b=40, l=10, r=10),
+    fig.update_layout(height=320, margin=dict(t=24, b=40, l=10, r=200),
                       xaxis=dict(range=[0, x_max], tickformat=".0%", title="score as % of own baseline"),
-                      yaxis=dict(tickvals=list(range(4)), ticktext=names, range=[-0.75, 3.6]))
+                      yaxis=dict(tickvals=list(range(4)), ticktext=names, range=[-0.6, 3.6]))
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Red: below 75% of baseline (NO-GO, rule 3). Amber: CAUTION band. Green: at or above the GO threshold "
                "(solid green line, rule 5). Dotted brown line: healthy population floor (rule 4). When rules 1–3 do not "
@@ -629,8 +631,8 @@ if med_allowed and fc and (test.status != "GO" or (med.active and (unreach or wo
 # ---------------------------------------------------------------- pharmacological scenario, next to its chart
 with st.container(border=True):
     st.subheader("Pharmacological scenario (what-if)")
-    st.markdown("**Promethazine (antiemetic) planned at or after the current session.** A planned dose adjusts only "
-                f"the retest estimate and never the test result ({M.LABEL}).")
+    st.markdown("**Promethazine (antiemetic) planned at or after the current session.** An unvalidated scenario: "
+                "a planned dose adjusts only the retest estimate and never the test result.")
     if not med_allowed:
         st.caption("Not applicable to the present inputs. The scenario applies only after landing, when every "
                    "condition has a valid recording and no fall has occurred.")
@@ -642,7 +644,7 @@ with st.container(border=True):
             st.radio("Route", ["oral", "im"], format_func=lambda r: "oral" if r == "oral" else "intramuscular",
                      horizontal=True, key="route", disabled=ss.get("dose", 0.0) == 0)
         with mc3:
-            st.slider("Dose time (h after the current session)", 0.0, 48.0, step=0.5, key="dose_after",
+            st.slider("Dose time (h after the current session)", 0.0, 48.0, step=0.5, key="dose_after", format="%.1f h",
                       disabled=ss.get("dose", 0.0) == 0)
         if ss.get("dose", 0.0) in (12.5, 50.0):
             st.caption("The 12.5 and 50 mg effects are extrapolated from the 25 mg study.")
